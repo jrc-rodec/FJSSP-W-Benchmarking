@@ -1,1 +1,1 @@
-# IEEE-SSCI-2025-FJSSP-WF-Competition
+# FJSSP-W Benchmarking Instances
