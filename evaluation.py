@@ -46,13 +46,13 @@ def translate(sequence : list[int], machines : list[int], workers : list[int], d
 
     job_sequence = sorted(sequence)
     jobs = set(job_sequence)
-    start_indices = [get_start_index for job in sorted(list(jobs))]
+    start_indices = [get_start_index(job, job_sequence) for job in sorted(list(jobs))]
     n_operations = len(durations)
     n_machines = len(durations[0])
     n_workers = len(durations[0][0])
     next_operation : list[int] = [0] * len(jobs)
-    end_on_machines : list[TimeSlot] = [TimeSlot(0, 0) for _ in range(n_machines)]
-    end_of_workers : list[TimeSlot] = [TimeSlot(0, 0) for _ in range(n_workers)]
+    end_on_machines : list[TimeSlot] = [[TimeSlot(0, 0)] for _ in range(n_machines)]
+    end_of_workers : list[TimeSlot] = [[TimeSlot(0, 0)] for _ in range(n_workers)]
     start_times : list[int] = [0] * n_operations
     end_times : list[int] = [0] * n_operations
     for i in range(n_operations):
@@ -79,8 +79,8 @@ def translate(sequence : list[int], machines : list[int], workers : list[int], d
         end_times[start_index] = offset + duration
         end_on_machines[machine].append(TimeSlot(offset, offset + duration))
         end_of_workers[worker].append(TimeSlot(offset, offset + duration))
-        end_on_machines[machine].sort(lambda x: x.start) # should be sorted anyway
-        end_of_workers[worker].sort(lambda x: x.start)
+        end_on_machines[machine].sort(key=lambda x: x.start) # should be sorted anyway
+        end_of_workers[worker].sort(key=lambda x: x.start)
     return start_times, machines, workers
 
 
