@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 def calculate_value(fitness, best):
     return ((fitness - best) / best)
 
-def ecdf_inf(vectors, column, max : bool = False, n_instances : int = 402, labels : list[str] = [], instances : list[str] = [], x_lim = (-0.1, 1.0), xlabel : str = None, ylabel : str = None, marker_frequence : int = 10, markers :list[str] = ['x', 'o', '^', '>', 'v', '<', '*']):
+def ecdf_inf(vectors, column, n_instances : int = 402, labels : list[str] = [], instances : list[str] = [], x_lim = (-0.1, 1.0), xlabel : str = None, ylabel : str = None, marker_frequence : int = 10, markers :list[str] = ['x', 'o', '^', '>', 'v', '<', '*']):
     plot_vectors = []
     for vector in vectors:
         plot_vectors.append([[0.0],[0.0]])
@@ -21,7 +21,7 @@ def ecdf_inf(vectors, column, max : bool = False, n_instances : int = 402, label
     for i in range(len(vectors)):
         if i >= len(markers):
             print(f'NOTE: not enough markers defined, recycling already used markers for {labels[i]}')
-        plt.plot(plot_vectors[i][0], plot_vectors[i][1], label=[labels[i]], marker=markers[i%len(markers)], markevery=list(range(0, len(plot_vectors[i][0]), int(len(plot_vectors[i][0])/marker_frequence))))
+        plt.plot(plot_vectors[i][0], plot_vectors[i][1], label=[labels[i]], marker=markers[i%len(markers)], markevery=list(range(0, len(plot_vectors[i][0]), max(1, int(len(plot_vectors[i][0])/marker_frequence)))))
     plt.xlim(x_lim[0], x_lim[1])
     if xlabel:
         plt.xlabel(xlabel)

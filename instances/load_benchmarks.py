@@ -1,6 +1,6 @@
 import csv
 import os
-from benchmark_parser import BenchmarkParser, WorkerBenchmarkParser
+from .benchmark_parser import BenchmarkParser, WorkerBenchmarkParser
 def filter(data, bounds : dict):
     header = data[0]
     data = data[1:]
@@ -32,26 +32,7 @@ def _load(path, bounds, worker=False):
         if worker:
             parser = WorkerBenchmarkParser()
             instance_path = r'instances/Example_Instances_FJSSP-WF'
-            if instance.lower().startswith('be'):
-                instance_path += f'/0_{instance}_workers.fjs'
-            elif instance.lower().startswith('br'):
-                instance_path += f'/1_{instance}_workers.fjs'
-            elif instance.lower().startswith('hurink_s'):
-                instance_path += f'/2a_{instance}_workers.fjs'
-            elif instance.lower().startswith('hurink_e'):
-                instance_path += f'/2b_{instance}_workers.fjs'
-            elif instance.lower().startswith('hurink_r'):
-                instance_path += f'/2c_{instance}_workers.fjs'
-            elif instance.lower().startswith('hurink_v'):
-                instance_path += f'/2d_{instance}_workers.fjs'
-            elif instance.lower().startswith('dp'):
-                instance_path += f'/3_{instance}_workers.fjs'
-            elif instance.lower().startswith('ch'):
-                instance_path += f'/4_{instance}_workers.fjs'
-            elif instance.lower().startswith('ka'):
-                instance_path += f'/5_{instance}_workers.fjs'
-            elif instance.lower().startswith('fa'):
-                instance_path += f'/6_{instance}_workers.fjs'  
+            instance_path = instance_path + f'/{instance}.fjs'
         else:
             parser = BenchmarkParser()
             instance_path = r'instances/Instances_FJSSP'
@@ -75,7 +56,7 @@ def _load(path, bounds, worker=False):
                 instance_path += f'/5_Kacem/{instance}.fjs'
             elif instance.lower().startswith('fa'):
                 instance_path += f'/6_Fattahi/{instance}.fjs'        
-        encoding = parser.parse_benchmark()
+        encoding = parser.parse_benchmark(instance_path)
         result[instance] = encoding
     return result
 
