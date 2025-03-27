@@ -15,6 +15,40 @@ def workload_balance(machine_assignments : list[int], worker_assignments : list[
         result += np.pow((mean_working_time - working_time), 2)
     return result
 
+def makespan_fjssp(start_times : list[int], machine_assignments : list[int], durations : list[list[list[int]]]) -> float:
+    return np.max([start_times[i] + durations[i][machine_assignments[i]] for i in range(len(start_times))])
+
+def translate_fjssp(sequence : list[int], machines : list[int], durations : list[list[list[int]]]) -> tuple[list[int], list[int]]:
+    def get_start_index(job : int, job_sequence : list[int]) -> int:
+        for i in range(len(job_sequence)):
+            if job_sequence[i] == job:
+                return i
+        return None
+    job_sequence = sorted(sequence)
+    jobs = sorted(list(set(sequence)))
+
+    n_machines = len(durations[0])
+    n_operations = len(sequence)
+    next_operations = [0] * len(jobs)
+    end_on_workstations = [0] * n_machines
+    end_times = [0] * n_operations
+    start_times = [0] * n_operations
+    start_indices = [get_start_index(job, job_sequence) for job in jobs]
+    for i in range(len(sequence)):
+        job = sequence[i]
+        operation = next_operations[job]
+        next_operations[job] += 1
+        start_index = start_indices[job] + operation
+        machine = machines[start_index]
+        duration = durations[start_index]
+        offset = 0
+        if operation > 0:
+            offset = max(0, end_times[start_index-1] - end_on_workstations[machine])
+        end_times[start_index] = end_on_workstations[machine]+duration+offset
+        start_times[start_index] = end_on_workstations[machine] + offset
+        end_on_workstations[machine] = end_times[start_index]
+    return start_times, machines
+
 def translate(sequence : list[int], machines : list[int], workers : list[int], durations : list[list[list[int]]]) -> tuple[list[int], list[int], list[int]]:
     
     class TimeSlot:

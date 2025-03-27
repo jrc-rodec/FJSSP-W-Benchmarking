@@ -1,7 +1,8 @@
 import csv
 import os
 from .benchmark_parser import BenchmarkParser, WorkerBenchmarkParser
-def filter(data, bounds : dict):
+
+def filter(data, bounds : dict[str, tuple[float,float]]) -> list[str]:
     header = data[0]
     data = data[1:]
     count = dict()
@@ -17,7 +18,7 @@ def filter(data, bounds : dict):
     result = [instance for instance in count if count[instance] == len(bounds)] # check if the instance fits all set bounds
     return result
 
-def _load(path, bounds, worker=False):
+def _load(path : str, bounds : dict[str, tuple[float,float]], worker : bool =False) -> dict:
     if filter:
         data = []
         with open(path, 'r', newline='') as f:
@@ -60,10 +61,10 @@ def _load(path, bounds, worker=False):
         result[instance] = encoding
     return result
 
-def load_fjssp_w(bounds):
+def load_fjssp_w(bounds : dict[str, tuple[float,float]]) -> dict:
     fjssp_w = r'instances/InstanceData/FJSSP-W/data.csv'
     return _load(fjssp_w, bounds, True)
 
-def load_fjssp(bounds):
+def load_fjssp(bounds : dict[str, tuple[float,float]]) -> dict:
     fjssp = r'instances/InstanceData/FJSSP/data.csv'
     return _load(fjssp, bounds)
