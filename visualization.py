@@ -62,5 +62,9 @@ def get_plot_vectors(data : dict[str, list[float]], delta_scope : float = 1.0) -
 
 def visualize_gaps(data : dict[str, list[float]], title : str = 'Fitness', x_lim_lb=-0.1, x_lim_ub=1.75, delta_scope : float = 1.0) -> None:
     plot_vectors, labels = get_plot_vectors(data, delta_scope)
-    ecdf_inf(plot_vectors, title+' $\delta_{rel}$', labels=labels, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
+    if delta_scope < 1.0:
+        plot_title = title + ' $\delta_{rel}$ <= '+ f'{(1.0-delta_scope)*100:.2f}%'
+    else:
+        plot_title = title + ' $\delta_{rel}$'
+    ecdf_inf(plot_vectors, plot_title, labels=labels, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
     
