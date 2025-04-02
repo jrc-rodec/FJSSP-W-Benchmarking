@@ -63,4 +63,21 @@ def get_plot_vectors(data : dict[str, list[float]], delta_scope : float = 1.0) -
 def visualize_gaps(data : dict[str, list[float]], title : str = 'Fitness', x_lim_lb=-0.1, x_lim_ub=1.75, delta_scope : float = 1.0) -> None:
     plot_vectors, labels = get_plot_vectors(data, delta_scope)
     ecdf_inf(plot_vectors, title+' $\delta_{rel}$', labels=labels, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
-    
+
+def progress_plot(fitness_data : list[float], timestamps : list[float], labels : list[str], title : str, delta_scope : float) -> None:
+    pass
+
+def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str = 'Progress', delta_scope : float = 1.0) -> None:
+    fitness_data = []
+    timestamps = []
+    labels = []
+    best = float('inf')
+    for solver in data:
+        for entry in data[solver]:
+            if entry[1] < best:
+                best = entry[1]
+    for solver in data:
+        labels.append(solver)
+        fitness_data[solver].append([max(calculate_value(entry[1], best * delta_scope)) for entry in data[solver]])
+        timestamps[solver].append([entry[0] for entry in data[solver]])
+    progress_plot(fitness_data, timestamps, labels, title)
