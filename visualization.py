@@ -62,12 +62,35 @@ def get_plot_vectors(data : dict[str, list[float]], delta_scope : float = 1.0) -
 
 def visualize_gaps(data : dict[str, list[float]], title : str = 'Fitness', x_lim_lb=-0.1, x_lim_ub=1.75, delta_scope : float = 1.0) -> None:
     plot_vectors, labels = get_plot_vectors(data, delta_scope)
-    ecdf_inf(plot_vectors, title+' $\delta_{rel}$', labels=labels, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
+    if delta_scope < 1.0:
+        plot_title = title + ' $\delta_{rel}$ <= '+ f'{(1.0-delta_scope)*100:.2f}%'
+    else:
+        plot_title = title + ' $\delta_{rel}$'
+    ecdf_inf(plot_vectors, plot_title, labels=labels, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
 
-def progress_plot(fitness_data : list[float], timestamps : list[float], labels : list[str], title : str, delta_scope : float) -> None:
-    pass
+def progress_plot(fitness_data : list[float], timestamps : list[float], labels : list[str], title : str, marker_frequence : int = 10, markers :list[str] = ['x', 'o', '^', '>', 'v', '<', '*'], xlim_lb : float = -0.01, xlim_ub : float = None) -> None:
+    n = 0
+    for i in range(len(labels)):
+        x = timestamps[i]
+        y = fitness_data[i]
+        label = labels[i]
+        if max(x) > n:
+            n = max(x)
+        if i >= len(markers):
+            print(f'NOTE: not enough markers defined, recycling already used markers for {labels[i]}')
+        plt.plot(x, y, label=[label], marker=markers[i%len(markers)], markevery=list(range(0, len(x), max(1, int(len(x)/marker_frequence)))))
+    if not xlim_ub:
+        xlim_ub = n
+    plt.xlim(xlim_lb, xlim_ub)
+    plt.legend()
+    plt.grid(True, 'both')
+    plt.xlabel('$t$')
+    plt.ylabel('$\delta_{rel}$')
+    plt.title(title)
+    plt.show()
 
-def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str = 'Progress', delta_scope : float = 1.0) -> None:
+
+def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str = 'Progress', delta_scope : float = 1.0, xlim_lb = None, xlim_ub = None) -> None:
     fitness_data = []
     timestamps = []
     labels = []
@@ -78,6 +101,12 @@ def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str 
                 best = entry[1]
     for solver in data:
         labels.append(solver)
-        fitness_data[solver].append([max(calculate_value(entry[1], best * delta_scope)) for entry in data[solver]])
-        timestamps[solver].append([entry[0] for entry in data[solver]])
-    progress_plot(fitness_data, timestamps, labels, title)
+        fitness_data.append([max(calculate_value(entry[1], best * delta_scope), 0) for entry in data[solver]])
+        timestamps.append([entry[0] for entry in data[solver]])
+    if delta_scope < 1.0:
+        plot_title = title + ' $\delta_{rel}$ <= '+ f'{(1.0-delta_scope)*100:.2f}%'
+    else:
+        plot_title = title + ' $\delta_{rel}$'
+    progress_plot(fitness_data=fitness_data, timestamps=timestamps, labels=labels, title=plot_title, xlim_lb=xlim_lb, xlim_ub=xlim_ub)
+
+    
