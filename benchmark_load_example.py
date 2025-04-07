@@ -1,8 +1,8 @@
-from instances.benchmark_parser import WorkerBenchmarkParser
+from util.benchmark_parser import WorkerBenchmarkParser
 
 def main(): 
 
-    path = r"instances\Example_Instances_FJSSP-WF\6_Fattahi_20_workers.fjs"
+    path = r"instances\Example_Instances_FJSSP-WF\Fattahi20.fjs"
     parser = WorkerBenchmarkParser()
     result = parser.parse_benchmark(path)
     print(result.durations())
