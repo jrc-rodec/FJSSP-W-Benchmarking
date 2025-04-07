@@ -60,13 +60,13 @@ def get_plot_vectors(data : dict[str, list[float]], delta_scope : float = 1.0) -
         vectors.append(vector)
     return vectors, labels
 
-def visualize_gaps(data : dict[str, list[float]], title : str = 'Fitness', x_lim_lb=-0.1, x_lim_ub=1.75, delta_scope : float = 1.0) -> None:
+def visualize_gaps(data : dict[str, list[float]], title : str = 'Fitness', n_instances : int = 1000,  x_lim_lb=-0.1, x_lim_ub=1.75, delta_scope : float = 1.0) -> None:
     plot_vectors, labels = get_plot_vectors(data, delta_scope)
     if delta_scope < 1.0:
         plot_title = title + ' $\delta_{rel}$ <= '+ f'{(1.0-delta_scope)*100:.2f}%'
     else:
         plot_title = title + ' $\delta_{rel}$'
-    ecdf_inf(plot_vectors, plot_title, labels=labels, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
+    ecdf_inf(plot_vectors, plot_title, labels=labels, n_instances=n_instances, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
 
 def progress_plot(fitness_data : list[float], timestamps : list[float], labels : list[str], title : str, marker_frequence : int = 10, markers :list[str] = ['x', 'o', '^', '>', 'v', '<', '*'], xlim_lb : float = -0.01, xlim_ub : float = None) -> None:
     n = 0
