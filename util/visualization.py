@@ -110,7 +110,7 @@ def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str 
     progress_plot(fitness_data=fitness_data, timestamps=timestamps, labels=labels, title=plot_title, xlim_lb=xlim_lb, xlim_ub=xlim_ub)
 
 
-def rank_plot(data : dict[str, dict[str, tuple[float,float]]]) -> None:
+def rank_plot(data : dict[str, dict[str, tuple[float,float]]], ignore_time : bool = False) -> None:
     import pandas as pd
     from autorank import autorank, plot_stats
     plt_data = dict()
@@ -123,7 +123,10 @@ def rank_plot(data : dict[str, dict[str, tuple[float,float]]]) -> None:
         plt_data[solver] = []
         for instance in instances:
             if instance in data[solver]:
-                plt_data[solver].append(data[solver][instance][-1][1])
+                if ignore_time:
+                    plt_data[solver].append(data[solver][instance])
+                else:
+                    plt_data[solver].append(data[solver][instance][-1][1])
             else:
                 plt_data[solver].append(float('inf'))
     df = pd.DataFrame()
