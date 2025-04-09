@@ -110,9 +110,10 @@ def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str 
     progress_plot(fitness_data=fitness_data, timestamps=timestamps, labels=labels, title=plot_title, xlim_lb=xlim_lb, xlim_ub=xlim_ub)
 
 
-def rank_plot(data : dict[str, dict[str, tuple[float,float]]], ignore_time : bool = False) -> None:
+def rank_plot(data : dict[str, dict[str, tuple[float,float]]], alpha : float = 0.05, ignore_time : bool = False) -> None:
     import pandas as pd
     from autorank import autorank, plot_stats
+    
     plt_data = dict()
     instances = []
     for solver in data:
@@ -132,6 +133,8 @@ def rank_plot(data : dict[str, dict[str, tuple[float,float]]], ignore_time : boo
     df = pd.DataFrame()
     for solver in plt_data:
         df[solver] = plt_data[solver]
-    result = autorank(df, alpha=0.05, verbose=False, order='ascending')
+    #f_test = friedmanchisquare([df[solver] for solver in plt_data])
+    result = autorank(df, alpha=alpha, verbose=False, order='ascending')
     plot_stats(result)
+    plt.text(0.0, 0.0, f'Friedman test returns $p$ = {result.pvalue:.3e}\n')
     plt.show()
