@@ -133,7 +133,6 @@ def rank_plot(data : dict[str, dict[str, tuple[float,float]]], alpha : float = 0
     df = pd.DataFrame()
     for solver in plt_data:
         df[solver] = plt_data[solver]
-    #f_test = friedmanchisquare([df[solver] for solver in plt_data])
     result = autorank(df, alpha=alpha, verbose=False, order='ascending')
     plot_stats(result)
     plt.text(0.0, 0.0, f'Friedman test returns $p$ = {result.pvalue:.3e}\n')

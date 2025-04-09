@@ -131,14 +131,18 @@ def minizinc_score(data : dict[str, dict[str, tuple[float, float]]], ignoreCompl
             for other in data:
                 if other != solver:
                     if instance in data[other]:
-                        other_time = data[other][instance][0]
-                        other_fitness = data[other][instance][1]
+                        if ignoreCompletionTime:
+                            other_time = 0
+                            other_fitness = data[other][instance]
+                        else:
+                            other_time = data[other][instance][0]
+                            other_fitness = data[other][instance][1]
                         if fitness < other_fitness:
                             scores[solver] += 1.0
                         if fitness == other_fitness:
-                            #if ignoreCompletionTime:
-                            #    scores[solver] += 0.5
-                            #else:
+                            if ignoreCompletionTime:
+                                scores[solver] += 0.5
+                            else:
                                 scores[solver] += other_time / (other_time + time)
                     else:
                         scores[solver] += 1.0
