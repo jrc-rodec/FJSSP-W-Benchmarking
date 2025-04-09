@@ -109,4 +109,26 @@ def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str 
         plot_title = title + ' $\delta_{rel}$'
     progress_plot(fitness_data=fitness_data, timestamps=timestamps, labels=labels, title=plot_title, xlim_lb=xlim_lb, xlim_ub=xlim_ub)
 
-    
+
+def rank_plot(data : dict[str, dict[str, tuple[float,float]]]) -> None:
+    import pandas as pd
+    from autorank import autorank, plot_stats
+    plt_data = dict()
+    instances = []
+    for solver in data:
+        for instance in data[solver]:
+            if instance not in instances:
+                instances.append(instance)
+    for solver in data:
+        plt_data[solver] = []
+        for instance in instances:
+            if instance in data[solver]:
+                plt_data[solver].append(data[solver][instance][-1][1])
+            else:
+                plt_data[solver].append(float('inf'))
+    df = pd.DataFrame()
+    for solver in plt_data:
+        df[solver] = plt_data[solver]
+    result = autorank(df, alpha=0.05, verbose=False, order='ascending')
+    plot_stats(result)
+    plt.show()
