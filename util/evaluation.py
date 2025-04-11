@@ -74,7 +74,7 @@ def translate(sequence : list[int], machines : list[int], workers : list[int], d
 
     def earliest_fit(times : list[TimeSlot], slot : TimeSlot) -> TimeSlot:
         for i in range(1, len(times)):
-            if times[i-1].end >= slot.start and times[i].start >= slot.end:
+            if times[i-1].end <= slot.start and times[i].start >= slot.end:
                 return times[i-1]
         return times[-1]
 
