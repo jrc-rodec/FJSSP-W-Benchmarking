@@ -94,9 +94,9 @@ def translate(sequence : list[int], machines : list[int], workers : list[int], d
         operation = next_operation[job]
         next_operation[job] += 1
         start_index = start_indices[job] + operation
-        machine = machines[i]
-        worker = workers[i]
-        duration = durations[i][machine][worker]
+        machine = machines[start_index]
+        worker = workers[start_index]
+        duration = durations[start_index][machine][worker]
         if duration == 0:
             raise Exception("Invalid solution")
         offset = 0
