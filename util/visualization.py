@@ -68,7 +68,7 @@ def visualize_gaps(data : dict[str, list[float]], title : str = 'Fitness', n_ins
         plot_title = title + ' $\delta_{rel}$'
     ecdf_inf(plot_vectors, plot_title, labels=labels, n_instances=n_instances, x_lim=(x_lim_lb, x_lim_ub), xlabel='$\delta_{rel}$', ylabel='Portion of Instances $\leq\delta_{rel}$')
 
-def progress_plot(fitness_data : list[float], timestamps : list[float], labels : list[str], title : str, marker_frequence : int = 10, markers :list[str] = ['x', 'o', '^', '>', 'v', '<', '*'], xlim_lb : float = -0.01, xlim_ub : float = None) -> None:
+def progress_plot(fitness_data : list[float], timestamps : list[float], labels : list[str], title : str, marker_frequence : int = 10, markers :list[str] = ['x', 'o', '^', '>', 'v', '<', '*'], xlim_lb : float = -0.01, xlim_ub : float = None, hline : float = None) -> None:
     n = 0
     for i in range(len(labels)):
         x = timestamps[i]
@@ -81,6 +81,9 @@ def progress_plot(fitness_data : list[float], timestamps : list[float], labels :
         plt.plot(x, y, label=[label], marker=markers[i%len(markers)], markevery=list(range(0, len(x), max(1, int(len(x)/marker_frequence)))))
     if not xlim_ub:
         xlim_ub = n
+    if hline:
+        plt.axhline(y=hline, color='r')
+        plt.yscale('log')
     plt.xlim(xlim_lb, xlim_ub)
     plt.legend()
     plt.grid(True, 'both')
@@ -101,13 +104,13 @@ def visualize_timeline(data : dict[str, list[tuple[float, float]]], title : str 
                 best = entry[1]
     for solver in data:
         labels.append(solver)
-        fitness_data.append([max(calculate_value(entry[1], best * delta_scope), 0) for entry in data[solver]])
+        fitness_data.append([max(calculate_value(entry[1], best), 0) for entry in data[solver]])
         timestamps.append([entry[0] for entry in data[solver]])
     if delta_scope < 1.0:
         plot_title = title + ' $\delta_{rel}$ <= '+ f'{(1.0-delta_scope)*100:.2f}%'
     else:
         plot_title = title + ' $\delta_{rel}$'
-    progress_plot(fitness_data=fitness_data, timestamps=timestamps, labels=labels, title=plot_title, xlim_lb=xlim_lb, xlim_ub=xlim_ub)
+    progress_plot(fitness_data=fitness_data, timestamps=timestamps, labels=labels, title=plot_title, xlim_lb=xlim_lb, xlim_ub=xlim_ub, hline=calculate_value(best * (1+(1.0-delta_scope)), best) if delta_scope < 1.0 else None)
 
 
 def rank_plot(data : dict[str, dict[str, tuple[float,float]]], alpha : float = 0.05, ignore_time : bool = False) -> None:
