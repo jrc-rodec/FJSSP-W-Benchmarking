@@ -113,8 +113,8 @@ def translate(sequence : list[int], machines : list[int], workers : list[int], d
         end_times[start_index] = offset + duration
         end_on_machines[machine].append(TimeSlot(offset, offset + duration))
         end_of_workers[worker].append(TimeSlot(offset, offset + duration))
-        end_on_machines[machine].sort(key=lambda x: x.start) # should be sorted anyway
-        end_of_workers[worker].sort(key=lambda x: x.start)
+        #end_on_machines[machine].sort(key=lambda x: x.start) # should be sorted anyway
+        #end_of_workers[worker].sort(key=lambda x: x.start)
     return start_times, machines, workers
 
 def minizinc_score(data : dict[str, dict[str, tuple[float, float]]], ignoreCompletionTime : bool = False) -> dict[str, float]:
