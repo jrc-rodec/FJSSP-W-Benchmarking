@@ -71,7 +71,7 @@ In addition to the performance plots above, the benchmarking environment provide
 
 The so-called MiniZinc score is a summarized measure of the mutual performance of the compared solvers across all selected instances of a problem type. The score is calculated by comparing the results of each solver relative to the results of all other solvers on each instance. On every instance, a solver receives one point for every solver that achieves a worse solution quality or infeasible results. In case of an equal solution quality, the time required to achieve the result is also considered. In that case, the two compared solvers split the point weighted by their time to achieve the result. The maximum score of a solver is bound by the number of instances times the number of compared solvers minus 1, i.e.
 
-$MiniZinc \: score \: \leq \:  \# instances \times \left( \# solvers -1 \right).$
+$MiniZinc \: score \: \leq \:  \\# instances \times \left( \\# solvers -1 \right).$
 
 For the example data used in the demonstration plots, the MiniZinc Score of the four solvers A to D is determined and displayed in the result table above. Considering the comparison of 4 solvers and the use of 402 instances the maximum score of a solver becomes 1206. 
 
