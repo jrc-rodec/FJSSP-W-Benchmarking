@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import statistics
 
 def calculate_value(fitness, best):
     return ((fitness - best) / best)
@@ -139,4 +140,61 @@ def rank_plot(data : dict[str, dict[str, tuple[float,float]]], alpha : float = 0
     result = autorank(df, alpha=alpha, verbose=False, order='ascending')
     plot_stats(result)
     plt.text(0.0, 0.0, f'Friedman test returns $p$ = {result.pvalue:.3e}\n')
+    plt.show()
+
+def show_simulation_results(instance : dict, results : list[float]):
+
+    plt.rcParams['axes.grid'] = True
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+
+    plt.scatter(range(len(results)), sorted(results), label='Simulation results', s=10)
+    plt.hlines(statistics.mean(results), 0, len(results), color='red', label='Average Makespan')
+    plt.hlines(statistics.mean(results) - statistics.stdev(results), 0, len(results), color='red', alpha=0.4, linestyles='--')
+    plt.hlines(statistics.mean(results) + statistics.stdev(results), 0, len(results), color='red', alpha=0.4, linestyles='--', label='STDEV Bounds')
+    plt.ylabel('Makespan')
+    plt.xlabel('Sorted simulations')
+    plt.title(f'Original (Planned) Makespan: {max(instance["e"])} | R: {statistics.mean(results)/max(instance["e"]):.4f}')
+    plt.legend()
+    plt.show()
+
+def show_simulation_comparison(results : list[list[float]], labels : list[str], instance : dict, title : str = None, mark_average : bool = False):
+    plt.rcParams['axes.grid'] = True
+    plt.rcParams['pdf.fonttype'] = 42
+    plt.rcParams['ps.fonttype'] = 42
+    fig, axs = plt.subplots(1, 2)
+    fig.set_figheight(7)
+    fig.set_figwidth(15)
+    i = 0
+    averages = []
+    lines = []
+    for result in results:
+        sorted_result = sorted(result)
+        x = range(len(result))
+        line = axs[0].plot(x, sorted_result, label=labels[i])
+        lines.append(line)
+        axs[0].scatter(x, sorted_result, s = 5, marker='*')
+        if mark_average:
+            r = statistics.mean(result)
+            index = 0
+            for j in range(len(sorted_result)):
+                if sorted_result[j] == r:
+                    index = r
+                    break
+                if sorted_result[j] > r:
+                    index = j-1
+                    break
+            averages.append((int(x[index]+0.5), r))
+        i+=1
+    if mark_average:
+        axs[0].scatter([average[0] for average in averages], [average[1] for average in averages], s=20, marker='+', color='red', zorder=10000)
+    axs[0].legend()
+    axs[0].set_ylabel('Makespan')
+    axs[0].set_xlabel('Sorted simulations')
+    axs[1].boxplot(results, labels=labels)
+    if not title:
+        fig.suptitle(f'Original (Planned) Makespan: {max(instance["e"])}')
+    else:
+        fig.suptitle(title)
+    
     plt.show()
