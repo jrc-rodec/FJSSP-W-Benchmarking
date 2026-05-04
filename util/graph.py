@@ -7,7 +7,7 @@ def run_n_simulations(s, e, m, w, js, d, uncertainty_parameters, n_simulations, 
     results = []
     for i in range(n_simulations):
         g = Graph(s, e, m, w, js)
-        g.simulate(d, uncertainty_parameters, uncertainty_source=uncertainty_source)
+        g.simulate(d, uncertainty_parameters)#, uncertainty_source=uncertainty_source)
         results.append(float(max(g.e)))
 
     robust_makespan = statistics.mean(results)
@@ -16,6 +16,9 @@ def run_n_simulations(s, e, m, w, js, d, uncertainty_parameters, n_simulations, 
     return results, robust_makespan, robust_makespan_stdev, R
 
 
+import copy
+import random
+import numpy as np
 class Graph:
 
     def __init__(self, s, e, a, w, js, leftshift : bool = False, buffers : list[float] = []):
@@ -38,19 +41,20 @@ class Graph:
             if len(nodes[i].parents) == 0:
                 self.roots.append(nodes[i])
         self.all_nodes = nodes
+        self.update()
 
     def get_vectors(self):
         s = []
         e = []
         m = []
         w = []
-        b = []
+        b = [self.all_nodes[i].buffer if len(self.all_nodes[i].children) > 0 else 0.0 for i in range(len(self.all_nodes))]
         for i in range(len(self.all_nodes)):
             s.append(self.all_nodes[i].start)
             e.append(self.all_nodes[i].end)
             m.append(self.all_nodes[i].machine)
             w.append(self.all_nodes[i].worker)
-            b.append(self.all_nodes[i].buffer)
+            #b.append(self.all_nodes[i].buffer)
         return s, e, m, w, b
 
     def add_child(self, current, open_list, closed_list):
@@ -64,47 +68,147 @@ class Graph:
         open_list.append(current)
 
     def real_duration(self, d, wv):
-        du = d*wv[2] + d*random.betavariate(wv[0], wv[1]) # get real duration
+        du = d*(1.0+min(2.0,(wv[2] + random.betavariate(wv[0], wv[1])))) # get real duration # NOTE: clamped to 2.0
         return du
     
     def update(self):
         open_list = []
         closed_list = []
         open_list.extend(self.roots)
+        n_changes = 0
         while len(open_list) > 0:
             current : Node = open_list.pop(0)
             closed_list.append(current)
             for child in current.children:
                 self.add_child(child, open_list, closed_list)
-            current.update_values()
+            change = current.update_values()
+            n_changes += change
         n_ops = len(self.e)
         for i in range(n_ops):
             self.s[i] = self.all_nodes[i].start
             self.b[i] = self.all_nodes[i].buffer
             self.e[i] = self.all_nodes[i].end
+        return n_changes
 
-    def simulate(self, d, wv : list = [], uncertainty_source : str = 'worker'):
-        d = copy.deepcopy(d)
-        machine_uncertainty = uncertainty_source == 'machine'
-        single_distribution = uncertainty_source == 'single'
-        if wv != None:
-            for i in range(len(d)):
-                for j in range(len(d[i])):
-                    for k in range(len(d[i][j])):
-                        d[i][j][k] = self.real_duration(d[i][j][k], wv[k] if not machine_uncertainty else wv[0] if single_distribution else wv[j]) # ignores 0s automatically
+    def simulate_processing_times(self, d, wv):
         open_list = []
         closed_list = []
         open_list.extend(self.roots)
+        changes = 0
         while len(open_list) > 0:
-            current : Node = open_list.pop(0)
+            current = open_list.pop(0)
             closed_list.append(current)
             for parent in current.parents: # should not be necessary
                 if parent not in closed_list:
                     print('something went wrong')
             for child in current.children:
                 self.add_child(child, open_list, closed_list)
-            current.update_time_slot(d)
-        self.update()
+            new_duration = self.real_duration(d[current.operation][current.machine][current.worker], wv[current.worker])
+            changes += current.update_time_slot(new_duration)
+        return changes + self.update()
+
+    def generate_events(self, up):
+        events = []
+        makespan = max(self.e)
+        for i in range(len(up)):
+            currentEvents = []
+            t = 0.0
+            r = random.expovariate(up[i][0])
+            while r > t and r < makespan:
+                duration = random.weibullvariate(up[i][1], up[i][2])
+                currentEvents.append((r, duration))
+                t = r + duration
+                r = random.expovariate(up[i][0])
+            currentEvents.sort(key=lambda x: x[0])
+            events.append(currentEvents)
+        return events
+
+    def generate_all_events(self, up):
+        events = self.generate_events(up)
+        all_events = []
+        for i in range(len(events)):
+            for j in range(len(events[i])):
+                all_events.append((i, events[i][j]))
+        all_events.sort(key=lambda x: x[1][0])
+        return all_events
+    
+    def find_affected_operation(self, start, end, machine = -1, worker = -1):
+        search = []
+        find = 0
+        
+        if machine == -1:
+            # worker unavailability
+            search = [node.worker for node in self.all_nodes]
+            find = worker
+        else:
+            search = [node.machine for node in self.all_nodes]
+            find = machine
+        indices = []
+        for i in range(len(search)):
+            if search[i] == find:
+                if self.s[i] <= end and start <= self.e[i]:
+                    indices.append(i)
+        if len(indices) == 0:
+            return -1
+        earliest = indices[0]
+        for i in range(1, len(indices)):
+            if self.s[indices[i]] < self.s[earliest]:
+                earliest = indices[i]
+        return earliest
+
+    def simulate_machine_breakdowns(self, d):
+        n_machines = len(d[0])
+        makespan_original = max(self.e)
+        lam = (1.0/n_machines)/makespan_original
+        up = []
+        for i in range(n_machines):
+            machine_lambda = lam * random.uniform(0.9,1.1)
+            alpha = random.uniform(makespan_original * 0.1, makespan_original * 0.2)
+            up.append([machine_lambda, alpha, 3.602])
+        all_events = self.generate_all_events(up)
+        operations = []
+        for i in range(len(all_events)):
+            operation = self.find_affected_operation(all_events[i][1][0], all_events[i][1][1], machine=all_events[i][0])
+            if operation != -1:
+                operations.append((operation, all_events[i][1]))
+        if len(operations) == 0:
+            return 0
+        operations.sort(key=lambda x: x[1][0])
+        for i in range(len(operations)):
+            self.all_nodes[operations[i][0]].end = operations[i][1][1]
+        return self.update()
+
+    def simulate_worker_unavailabilities(self, d):
+        n_workers = len(d[0][0])
+        makespan_original = max(self.e)
+        lam = ((1.0/n_workers)/makespan_original)/2.0
+        up = []
+        for i in range(n_workers):
+            worker_lambda = lam * random.uniform(0.9,1.1)
+            alpha = random.uniform(makespan_original * 0.5, makespan_original * 1.0)
+            up.append([worker_lambda, alpha, 3.602])
+        all_events = self.generate_all_events(up)
+        operations = []
+        for i in range(len(all_events)):
+            operation = self.find_affected_operation(all_events[i][1][0], all_events[i][1][1], worker=all_events[i][0])
+            if operation != -1:
+                operations.append((operation, all_events[i][1]))
+        if len(operations) == 0:
+            return 0
+        operations.sort(key=lambda x: x[1][0])
+        for i in range(len(operations)):
+            self.all_nodes[operations[i][0]].end = operations[i][1][1]
+        return self.update()
+
+    def simulate(self, d, wv = None, processing_times : bool = True, machine_breakdowns : bool = False, worker_unavailability : bool = False):
+        n_conflicts = 0
+        if processing_times:
+            n_conflicts += self.simulate_processing_times(d, wv)
+        if machine_breakdowns:
+            n_conflicts += self.simulate_machine_breakdowns(d)
+        if worker_unavailability:
+            n_conflicts += self.simulate_worker_unavailabilities(d)
+        return n_conflicts
 
     def get_predecessors(self, node):
         open_list = [node]
@@ -134,88 +238,10 @@ class Graph:
     def count_children(self, node):
         return len(self.get_successors(node))
 
-    def get_makespan(self):
-        pass
+    def makespan(self):
+        return max(self.e)
 
-    def plot_data(self, strict : bool = False):
-        s = []
-        e = []
-        m = []
-        b = []
-        jb = []
-        w = []
-        l = []
-        pre = []
-        suc = []
-        sequence = []
-        c = max([node.end for node in self.all_nodes])
-        c_nodes = [node for node in self.all_nodes if node.end == c]
-        n_machines = len(list(set([node.machine for node in self.all_nodes])))
-        n_workers = len(list(set([node.worker for node in self.all_nodes])))
-        crit_nodes = []
-        for node in c_nodes:
-            crit_nodes.append(node)
-            if not strict:
-                predecessors = self.get_predecessors(node)
-                for predecessor in predecessors:
-                    if predecessors not in crit_nodes:
-                        crit_nodes.append(predecessor)
-            else:
-                predecessors = [parent for parent in node.parents]
-                while len(predecessors) > 0:
-                    most_critical = [predecessors.pop(0)]
-                    for parent in predecessors:
-                        if node.start-parent.end < node.start-most_critical[0].end:
-                            most_critical = [parent]
-                        elif node.start-parent.end == node.start-most_critical[0].end:
-                            most_critical.append(parent)
-                    predecessors = []
-                    for parent in most_critical:
-                        if parent not in crit_nodes:
-                            crit_nodes.append(parent)
-                            predecessors.extend(parent.parents)
-        is_critnode = [True if node in crit_nodes else False for node in self.all_nodes]
-        for i in range(len(self.all_nodes)):
-            s.append(self.all_nodes[i].start)
-            e.append(self.all_nodes[i].end)
-            m.append(self.all_nodes[i].machine)
-            b.append(self.all_nodes[i].buffer)
-            jb.append(self.all_nodes[i].job)
-            w.append(self.all_nodes[i].worker)
-            pre.append(self.count_parents(self.all_nodes[i]))
-            suc.append(self.count_children(self.all_nodes[i]))
-            
-            l.append([])
-            for child in self.all_nodes[i].children:
-                l[-1].append([e[-1],child.start, m[-1], child.machine])
-            sequence.append(self.all_nodes[i].operation)
-        js = sorted(sequence, key=lambda x: s[x])
-        on_machine = []
-        for i in range(n_machines): # n machines
-            machine = []
-            for j in range(len(js)):
-                if m[j] == i:
-                    machine.append(j)
-            machine.sort(key=lambda x: s[x])
-            on_machine.append(machine)
-        same_worker = []
-        for i in range(n_workers): # n workers
-            worker = []
-            for j in range(len(js)):
-                if w[j] == i:
-                    worker.append(j)
-            worker.sort(key=lambda x: s[x])
-            same_worker.append(worker)
-        job_sequence = []
-        for i in range(len(set(js))):
-            job = [0] * len(js)
-            for j in range(js.index(i), js.index(i)+js.count(i)):
-                operation = j-js.index(i)
-                n_operations = js.count(i)
-                job[j] = n_operations-operation-1
-            job_sequence.append(job)
-        return s, e, m, w, b, jb, l, pre, suc, job_sequence, on_machine, same_worker, is_critnode
-
+    
 class Node:
 
     leftshift = False
@@ -228,7 +254,7 @@ class Node:
         self.worker = w[i]
         self.parents = []
         self.children = []
-        self.buffer = b[i]*(self.end-self.start)
+        self.buffer = b[i]#*(self.end-self.start)
         
         self.operation = i
 
@@ -265,27 +291,33 @@ class Node:
         s = self.start
         e = self.end
         d = e-s
-        parent_end_times = [parent.end + parent.buffer for parent in self.parents]
+        change = 0
+        parent_end_times = [parent.end + ((parent.end-parent.start)*parent.buffer) for parent in self.parents]
         parent_end_times.append(s)
         earliest_start = max(parent_end_times)# if len(parent_end_times) > 0 else 0
-        if earliest_start > s or (Node.leftshift and earliest_start < s):
+        if earliest_start > s:# or (Node.leftshift and earliest_start < s):
             s = earliest_start
             e = s + d
+            change = 1
         self.start = s
         self.end = e
+        return change
 
     def update_time_slot(self, du):
         s = self.start
         #d = e - s # determine real duration here
-        d = du[self.operation][self.machine][self.worker]
+        d = du#[self.operation][self.machine][self.worker]
         e = s + d#self.end
-        parent_end_times = [parent.end + parent.buffer for parent in self.parents]
+        change = 0
+        parent_end_times = [parent.end + ((parent.end-parent.start)*parent.buffer) for parent in self.parents]
         parent_end_times.append(s)
         earliest_start = max(parent_end_times)# if len(parent_end_times) > 0 else 0
         if earliest_start > s or (Node.leftshift and earliest_start < s):
             s = earliest_start
             e = s + d
+            change = 1
         self.start = s
-        self.buffer = max(0, self.end+self.buffer - e)
+        #self.buffer = max(0, self.end+self.buffer - e)
         self.end = e
+        return change
         
